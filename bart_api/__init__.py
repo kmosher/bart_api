@@ -2,14 +2,12 @@ from urllib import urlencode
 from urllib2 import urlopen
 from xml.etree import ElementTree
 
-DEBUG = False
-
 class BartApiException(Exception): pass
 
-def get_xml(url):
+def get_xml(url, debug=False):
     raw_response = urlopen(url)
     xml = parse_response(raw_response)
-    if DEBUG: ElementTree.dump(xml)
+    if debug: ElementTree.dump(xml)
     errors = xml.find('error')
     if errors:
         raise BartApiException(errors.findtext('text'), errors.findtext('details'))
@@ -27,6 +25,7 @@ class BartApi():
     def __init__(self, api_root='http://api.bart.gov/api', api_key='MW9S-E7SL-26DU-VV8V'):
         self.api_root = api_root
         self.api_key = api_key
+        self.DEBUG = False
 
     def call(self, servlet, cmd, **args):
         args.update({'cmd': cmd, 'key': self.api_key})
@@ -34,7 +33,7 @@ class BartApi():
             self.api_root,
             servlet,
             urlencode(args))
-        return get_xml(url)
+        return get_xml(url, self.DEBUG)
 
     def number_of_trains(self):
         return int(self.call('bsa', 'count').findtext('traincount'))
