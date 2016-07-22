@@ -7,20 +7,20 @@ DEBUG = False
 class BartApiException(Exception): pass
 
 def get_xml(url):
-  raw_response = urlopen(url)
-  xml = parse_response(raw_response)
-  if DEBUG: ElementTree.dump(xml)
-  errors = xml.find('error')
-  if errors:
-      raise BartApiException(errors.findtext('text'), errors.findtext('details'))
-  return xml
+    raw_response = urlopen(url)
+    xml = parse_response(raw_response)
+    if DEBUG: ElementTree.dump(xml)
+    errors = xml.find('error')
+    if errors:
+        raise BartApiException(errors.findtext('text'), errors.findtext('details'))
+    return xml
 
 def parse_response(raw_xml):
-  if isinstance(raw_xml, bytes):
-    parsed_xml = ElementTree.fromstring(raw_xml, parser=ElementTree.XMLParser(encoding='utf-8'))
-  else:
-    parsed_xml = ElementTree.parse(raw_xml)
-  return parsed_xml
+    if isinstance(raw_xml, bytes):
+      parsed_xml = ElementTree.fromstring(raw_xml, parser=ElementTree.XMLParser(encoding='utf-8'))
+    else:
+      parsed_xml = ElementTree.parse(raw_xml)
+    return parsed_xml
 
 
 class BartApi():
