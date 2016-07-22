@@ -38,7 +38,7 @@ def camel_to_snake(string):
 class Station(object):
 
     def __init__(self, abbreviation, name=None):
-        self.abbreviation = abbreviation
+        self.abbreviation = abbreviation.upper()
         self.name = name
 
     def __hash__(self):
@@ -141,6 +141,11 @@ class BartApi(object):
         xml = self.call('sched', 'holiday')
         return [etree_to_dict(holiday) for holiday in xml.findall('holidays/holiday')]
 
+    def route_schedule(self, route, date=None, schedule=None,):
+        xml = self.call('sched', 'routesched', route=route, date=date, sched=schedule)
+        return {int(train.get('index')): [element_to_dict(stop) for stop in train.findall('stop')]
+                for train in xml.findall('route/train')}
+
     def schedules(self):
         xml = self.call('sched', 'scheds')
         return [element_to_dict(schedule) for schedule in xml.findall('schedules/schedule')]
@@ -165,18 +170,3 @@ class BartApi(object):
             return list_of_items
 
 
-    def get_route_schedule(self, sched='', date='today', legend="1"):
-        if not sched=='':
-            xml = get_xml(API_ROOT + "stn.aspx?cmd=special&sched=%s&key=%s&l=%s" % (sched,self.api_key,legend))
-        elif sched == '':
-            xml = get_xml(API_ROOT + "stn.aspx?cmd=special&date=%s&key=%s&l=%s" % (date,self.api_key,legend))
-        raw_routes = xml.findall(".//train")
-        trains = {}
-        for train in raw_routes:
-                stops = {}
-                raw_stops = train.findall(".//stop")
-                for stop in raw_stops:
-                        raw_dict = { "orig_time" : stop.get("origTime"), "bikeflags" : stop.get("bikeflag") }
-                        stops[stop.get("station")] = raw_dict
-                trains[train.get("index")] = stops
-        return trains
