@@ -1,7 +1,7 @@
+from urllib import urlencode
 from urllib2 import urlopen
 from xml.etree import ElementTree
 
-API_ROOT = 'http://api.bart.gov/api/'
 DEBUG = False
 
 class BartApiException(Exception): pass
@@ -24,26 +24,30 @@ def parse_response(raw_xml):
 
 
 class BartApi():
-  def __init__(self, api_key="MW9S-E7SL-26DU-VV8V"):
+  def __init__(self, api_root='http://api.bart.gov/api', api_key="MW9S-E7SL-26DU-VV8V"):
+    self.api_root = api_root
     self.api_key = api_key
 
+  def call(self, servlet, cmd, **args):
+      args.update({'cmd': cmd, 'key': self.api_key})
+      url = "{}/{}.aspx?{}".format(
+          self.api_root,
+          servlet,
+          urlencode(args))
+      return get_xml(url)
+
   def number_of_trains(self):
-    xml = get_xml(API_ROOT + "bsa.aspx?cmd=count&key=%s" % (self.api_key))
-    train_count = xml.findtext('traincount')
-    return train_count
+    return int(self.call("bsa", "count").findtext('traincount'))
 
   def elevator_status(self):
-    xml = get_xml(API_ROOT + "bsa.aspx?cmd=elev&key=%s" % (self.api_key))
-    elevator_status = xml.findtext('bsa/description')
-    return elevator_status
+    return self.call("bsa", "elev").findtext('bsa/description')
 
   def get_stations(self):
-    xml = get_xml(API_ROOT + "stn.aspx?cmd=stns&key=%s" % (self.api_key))
-    stations = xml.findall("stations/station")
+    stations = self.call('stn', 'stns').findall("stations/station")
     return [{elt.tag: elt.text for elt in station} for station in stations]
 
   def bsa(self, stn="ALL"):
-    xml = get_xml(API_ROOT + "stn.aspx?cmd=stninfo&orig=%s&key=%s" % (stn,self.api_key))
+    xml = get_xml(API_ROOT + "stn.aspx?cmd=stninfo&orig=%s&key=%s" % (stn, self.api_key))
     return xml.find(".//description").text
 
   def station_info(self, station):
