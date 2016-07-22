@@ -119,6 +119,10 @@ class BartApi(object):
         xml = self.call('route', 'routeinfo', route='all', date=date, sched=schedule)
         return [self._route_to_dict(route) for route in xml.findall('routes/route')]
 
+    def holidays(self):
+        xml = self.call('sched', 'holiday')
+        return [etree_to_dict(holiday) for holiday in xml.findall('holidays/holiday')]
+
     def get_item(self, item_name, xml):
         item_list = xml.findall(".//" + item_name)
         if len(item_list) == 1:
@@ -128,15 +132,6 @@ class BartApi(object):
             for entry in item_list:
                     list_of_items.append(entry.text)
             return list_of_items
-
-    def get_holidays(self):
-        xml = get_xml(API_ROOT + "route.aspx?cmd=holiday&key=%s" % (self.api_key))
-        raw_holidays = xml.findall(".//holiday")
-        holiday_list = []
-        for holiday in raw_holidays:
-            holiday_list.append(dict(((elt.tag,elt.text) for elt in holiday)))
-        return holiday_list
-
 
     def get_schedules(self):
         xml = get_xml(API_ROOT + "route.aspx?cmd=scheds&key=%s" % (self.api_key))
