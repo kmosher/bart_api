@@ -101,19 +101,9 @@ class BartApi(object):
                 self._etds_to_dict(station.findall('etd'))
                 for station in xml.findall('station')}
 
-    def routes(self, sched=None, date="today"):
-        if sched is None:
-            url = API_ROOT + "route.aspx?cmd=routes&date=%s&key=%s" % (date,self.api_key)
-        else:
-            url = API_ROOT + "route.aspx?cmd=routes&sched=%s&key=%s" % (sched,self.api_key)
-            
-        xml = get_xml(url)
-        raw_routes = xml.findall(".//route")
-        routes = []
-        for route in raw_routes:
-            routes.append(dict(((elt.tag,elt.text) for elt in route)))
-        return routes
-
+    def routes(self, date="now", schedule=None):
+        xml = self.call('route', 'routes', date=date, sched=schedule)
+        return [etree_to_dict(route) for route in xml.findall("routes/route")]
 
     def route_info(self, route="all", sched=None, date="today"):
         if sched is None:
