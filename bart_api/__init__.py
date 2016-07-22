@@ -34,6 +34,19 @@ def camel_to_snake(string):
     s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', string)
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
+def _route_to_dict(route_elm):
+    route = etree_to_dict(route_elm)
+    del route['config']
+    route['stations'] = list(route_elm.find("config").itertext())
+    return route
+
+def _etds_to_dict(etds):
+    departures = {}
+    for etd in etds:
+        station = Station(etd.findtext('abbreviation'), etd.findtext('destination'))
+        departures[station] = [etree_to_dict(elt) for elt in etd.findall('estimate')]
+    return departures
+
 
 class Station(object):
 
@@ -68,75 +81,42 @@ class BartApi(object):
             urlencode(kwargs))
         return get_xml(url, self.debug)
 
+    # BSA
+    def advisories(self, station='ALL'):
+        bsas = self.call('bsa', 'bsa', orig=station).findall('bsa')
+        return [{elm.findtext('station'): elm.findtext('description')} for elm in bsas]
+
     def number_of_trains(self):
         return int(self.call('bsa', 'count').findtext('traincount'))
 
     def elevator_status(self):
         return self.call('bsa', 'elev').findtext('bsa/description')
 
-    def get_advisories(self, station='ALL'):
-        bsas = self.call('bsa', 'bsa', orig=station).findall('bsa')
-        return [{elm.findtext('station'): elm.findtext('description')} for elm in bsas]
-
-    def get_stations(self):
-        stations = self.call('stn', 'stns').findall('stations/station')
-        return [etree_to_dict(station) for station in stations]
-
-    def station_info(self, station):
-        station_elm = self.call('stn', 'stninfo', orig=station).find('stations/station')
-        if station_elm is None:
-            raise BartApiException('No station info found for "%s"' % station)
-        return etree_to_dict(station_elm)
-
-    def station_access(self, station, legend="0"):
-        station_elm = self.call('stn', 'stnaccess', orig=station, l=legend).find('stations/station')
-        if station_elm is None:
-            raise BartApiException('No station access info found for "%s"' % station)
-        station_dict = etree_to_dict(station_elm)
-        station_dict['flags'] = element_to_dict(station_elm)
-        return station_dict
-
-    def _etds_to_dict(self, etds):
-        departures = {}
-        for etd in etds:
-            station = Station(etd.findtext('abbreviation'), etd.findtext('destination'))
-            departures[station] = [etree_to_dict(elt) for elt in etd.findall('estimate')]
-        return departures
-
-    def departure_info(self, station, platform=None, direction=None):
+    # ETD
+    def estimated_departures(self, station, platform=None, direction=None):
         xml = self.call('etd', 'etd', orig=station, platform=platform, direction=direction)
-        return self._etds_to_dict(xml.findall('station/etd'))
+        return _etds_to_dict(xml.findall('station/etd'))
 
-    def all_departure_info(self):
+    def all_estimated_departures(self):
         xml = self.call('etd', 'etd', orig='ALL')
         return {Station(station.findtext('abbr'), station.findtext('name')):
-                self._etds_to_dict(station.findall('etd'))
+                _etds_to_dict(station.findall('etd'))
                 for station in xml.findall('station')}
+
+    # ROUTE
+    def route_info(self, route, date=None, schedule=None):
+        xml = self.call('route', 'routeinfo', route=route, date=date, sched=schedule)
+        return _route_to_dict(xml.find('routes/route'))
+
+    def all_route_info(self, date=None, schedule=None):
+        xml = self.call('route', 'routeinfo', route='all', date=date, sched=schedule)
+        return [_route_to_dict(route) for route in xml.findall('routes/route')]
 
     def routes(self, date=None, schedule=None):
         xml = self.call('route', 'routes', date=date, sched=schedule)
         return [etree_to_dict(route) for route in xml.findall("routes/route")]
 
-    def _route_to_dict(self, route_elm):
-        route = etree_to_dict(route_elm)
-        del route['config']
-        route['stations'] = list(route_elm.find("config").itertext())
-        return route
-
-    def route_info(self, route, date=None, schedule=None):
-        xml = self.call('route', 'routeinfo', route=route, date=date, sched=schedule)
-        return self._route_to_dict(xml.find('routes/route'))
-
-    def all_route_info(self, date=None, schedule=None):
-        xml = self.call('route', 'routeinfo', route='all', date=date, sched=schedule)
-        return [self._route_to_dict(route) for route in xml.findall('routes/route')]
-
-    def fare(self, origin, destination, date=None, schedule=None):
-        xml = self.call('sched', 'fare', orig=origin, dest=destination, date=date, sched=schedule)
-        trip = etree_to_dict(xml.find('trip'))
-        trip['discount'] = etree_to_dict(xml.find('trip/discount'))
-        return trip
-
+    # SCHED
     def _trip_plan(self, cmd, origin, destination, time=None, date=None, before=None, after=None, legend=None):
         xml = self.call('sched', cmd, orig=origin, dest=destination, time=time, date=date,
                         b=before, a=after, legend=legend)
@@ -154,17 +134,23 @@ class BartApi(object):
     def depart(self, *args, **kwargs):
         return self._trip_plan('depart', *args, **kwargs)
 
-    # TODO: Make this API way more pythonic
-    def load(self, first_leg, second_leg=None, third_leg=None, schedule_type='W'):
-        xml = self.call('sched', 'load', ld1=first_leg, ld2=second_leg, ld3=third_leg, st=schedule_type)
-        return [element_to_dict(leg) for leg in xml.findall('load/request/leg')]
+    def fare(self, origin, destination, date=None, schedule=None):
+        xml = self.call('sched', 'fare', orig=origin, dest=destination, date=date, sched=schedule)
+        trip = etree_to_dict(xml.find('trip'))
+        trip['discount'] = etree_to_dict(xml.find('trip/discount'))
+        return trip
 
     def holidays(self):
         xml = self.call('sched', 'holiday')
         return [etree_to_dict(holiday) for holiday in xml.findall('holidays/holiday')]
 
-    def route_schedule(self, route, date=None, schedule=None,):
-        xml = self.call('sched', 'routesched', route=route, date=date, sched=schedule)
+    # TODO: Make this API way more pythonic
+    def load(self, first_leg, second_leg=None, third_leg=None, schedule_type='W'):
+        xml = self.call('sched', 'load', ld1=first_leg, ld2=second_leg, ld3=third_leg, st=schedule_type)
+        return [element_to_dict(leg) for leg in xml.findall('load/request/leg')]
+
+    def route_schedule(self, route, date=None, schedule=None, legend=None):
+        xml = self.call('sched', 'routesched', route=route, date=date, sched=schedule, l=legend)
         return {int(train.get('index')): [element_to_dict(stop) for stop in train.findall('stop')]
                 for train in xml.findall('route/train')}
 
@@ -180,3 +166,22 @@ class BartApi(object):
     def station_schedule(self, station, date=None):
         xml = self.call('sched', 'stnsched', orig=station, date=date)
         return [element_to_dict(item) for item in xml.findall('station/item')]
+
+    # STN
+    def station_access(self, station, legend="0"):
+        station_elm = self.call('stn', 'stnaccess', orig=station, l=legend).find('stations/station')
+        if station_elm is None:
+            raise BartApiException('No station access info found for "%s"' % station)
+        station_dict = etree_to_dict(station_elm)
+        station_dict['flags'] = element_to_dict(station_elm)
+        return station_dict
+
+    def station_info(self, station):
+        station_elm = self.call('stn', 'stninfo', orig=station).find('stations/station')
+        if station_elm is None:
+            raise BartApiException('No station info found for "%s"' % station)
+        return etree_to_dict(station_elm)
+
+    def stations(self):
+        stations = self.call('stn', 'stns').findall('stations/station')
+        return [etree_to_dict(station) for station in stations]
