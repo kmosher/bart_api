@@ -144,8 +144,6 @@ class BartApi(object):
         for trip_elm in xml.findall('schedule/request/trip'):
             trip = element_to_dict(trip_elm)
             fares = trip_elm.find('fares')
-            # TODO FIXME
-            trip['fares'] = [element_to_dict(fare) for fare in trip_elm.findall('fares/fare')]
             trip['legs'] = [element_to_dict(leg) for leg in trip_elm.findall('leg')]
             trips.append(trip)
         return trips
