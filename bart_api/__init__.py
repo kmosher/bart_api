@@ -131,11 +131,30 @@ class BartApi(object):
         xml = self.call('route', 'routeinfo', route='all', date=date, sched=schedule)
         return [self._route_to_dict(route) for route in xml.findall('routes/route')]
 
-    def fare(self, origin, dest, date=None, schedule=None):
-        xml = self.call('sched', 'fare', orig=origin, dest=dest, date=date, sched=schedule)
+    def fare(self, origin, destination, date=None, schedule=None):
+        xml = self.call('sched', 'fare', orig=origin, dest=destination, date=date, sched=schedule)
         trip = etree_to_dict(xml.find('trip'))
         trip['discount'] = etree_to_dict(xml.find('trip/discount'))
         return trip
+
+    def _trip_plan(self, cmd, origin, destination, time=None, date=None, before=None, after=None, legend=None):
+        xml = self.call('sched', cmd, orig=origin, dest=destination, time=time, date=date,
+                        b=before, a=after, legend=legend)
+        trips = []
+        for trip_elm in xml.findall('schedule/request/trip'):
+            trip = element_to_dict(trip_elm)
+            fares = trip_elm.find('fares')
+            # TODO FIXME
+            trip['fares'] = [element_to_dict(fare) for fare in trip_elm.findall('fares/fare')]
+            trip['legs'] = [element_to_dict(leg) for leg in trip_elm.findall('leg')]
+            trips.append(trip)
+        return trips
+
+    def arrive(self, *args, **kwargs):
+        return self._trip_plan('arrive', *args, **kwargs)
+
+    def depart(self, *args, **kwargs):
+        return self._trip_plan('depart', *args, **kwargs)
 
     # TODO: Make this API way more pythonic
     def load(self, first_leg, second_leg=None, third_leg=None, schedule_type='W'):
