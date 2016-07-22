@@ -8,8 +8,8 @@ def get_xml(url, debug=False):
     raw_response = urlopen(url)
     xml = parse_response(raw_response)
     if debug: ElementTree.dump(xml)
-    errors = xml.find('error')
-    if errors:
+    errors = xml.find('message/error')
+    if errors is not None:
         raise BartApiException(errors.findtext('text'), errors.findtext('details'))
     return xml
 
