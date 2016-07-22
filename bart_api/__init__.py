@@ -34,7 +34,7 @@ class BartApi():
 
   def elevator_status(self):
     xml = get_xml(API_ROOT + "bsa.aspx?cmd=elev&key=%s" % (self.api_key))
-    elevator_status = xml.xpath('bsa')[0].xpath('description')[0].text
+    elevator_status = xml.findtext('bsa/description')
     return elevator_status
 
   def get_stations(self):
