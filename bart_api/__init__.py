@@ -20,6 +20,8 @@ def parse_response(raw_xml):
       parsed_xml = ElementTree.parse(raw_xml)
     return parsed_xml
 
+def etree_to_dict(element_tree):
+    return {elt.tag: elt.text for elt in element_tree}
 
 class BartApi():
     def __init__(self, api_root='http://api.bart.gov/api', api_key='MW9S-E7SL-26DU-VV8V'):
@@ -47,7 +49,7 @@ class BartApi():
 
     def get_stations(self):
         stations = self.call('stn', 'stns').findall('stations/station')
-        return [{elt.tag: elt.text for elt in station} for station in stations]
+        return [etree_to_dict(station) for station in stations]
 
     def station_info(self, station):
         xml = get_xml(API_ROOT + "stn.aspx?cmd=stninfo&orig=%s&key=%s" % (station,self.api_key))
