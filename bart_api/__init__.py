@@ -24,26 +24,26 @@ def parse_response(raw_xml):
 
 
 class BartApi():
-  def __init__(self, api_root='http://api.bart.gov/api', api_key="MW9S-E7SL-26DU-VV8V"):
+  def __init__(self, api_root='http://api.bart.gov/api', api_key='MW9S-E7SL-26DU-VV8V'):
     self.api_root = api_root
     self.api_key = api_key
 
   def call(self, servlet, cmd, **args):
       args.update({'cmd': cmd, 'key': self.api_key})
-      url = "{}/{}.aspx?{}".format(
+      url = '{}/{}.aspx?{}'.format(
           self.api_root,
           servlet,
           urlencode(args))
       return get_xml(url)
 
   def number_of_trains(self):
-    return int(self.call("bsa", "count").findtext('traincount'))
+    return int(self.call('bsa', 'count').findtext('traincount'))
 
   def elevator_status(self):
     return self.call("bsa", "elev").findtext('bsa/description')
 
   def get_stations(self):
-    stations = self.call('stn', 'stns').findall("stations/station")
+    stations = self.call('stn', 'stns').findall('stations/station')
     return [{elt.tag: elt.text for elt in station} for station in stations]
 
   def bsa(self, stn="ALL"):
