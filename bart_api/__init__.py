@@ -23,6 +23,24 @@ def parse_response(raw_xml):
 def etree_to_dict(element_tree):
     return {elt.tag: elt.text for elt in element_tree}
 
+class Station(object):
+
+    def __init__(self, abbreviation, name=None):
+        self.abbreviation = abbreviation
+        self.name = name
+
+    def __hash__(self):
+        return hash(self.abbreviation)
+
+    def __str__(self):
+        if self.name is not None:
+            return self.name
+        else:
+            return self.abbreviation
+
+    def __repr__(self):
+        return self.abbreviation
+
 class BartApi(object):
     def __init__(self, api_root='http://api.bart.gov/api', api_key='MW9S-E7SL-26DU-VV8V'):
         self.api_root = api_root
@@ -69,9 +87,8 @@ class BartApi(object):
     def _etds_to_dict(self, etds):
         departures = {}
         for etd in etds:
-            departures[etd.findtext('abbreviation')] = {
-                'name': etd.findtext('destination'),
-                'estimates' : [etree_to_dict(elt) for elt in etd.findall('estimate')]}
+            station = Station(etd.findtext('abbreviation'), etd.findtext('destination'))
+            departures[station] = [etree_to_dict(elt) for elt in etd.findall('estimate')]
         return departures
 
     def departure_info(self, station, platform=None, direction=None):
@@ -80,7 +97,7 @@ class BartApi(object):
 
     def all_departure_info(self):
         xml = self.call('etd', 'etd', orig='ALL')
-        return {station.findtext('abbr'):
+        return {Station(station.findtext('abbr'), station.findtext('name')):
                 self._etds_to_dict(station.findall('etd'))
                 for station in xml.findall('station')}
 
