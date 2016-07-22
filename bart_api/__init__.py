@@ -39,11 +39,8 @@ class BartApi():
 
   def get_stations(self):
     xml = get_xml(API_ROOT + "stn.aspx?cmd=stns&key=%s" % (self.api_key))
-    stations = xml.find("stations").findall("station")
-    station_list = []
-    for station in stations:
-        station_list.append(dict(((elt.tag,elt.text) for elt in station)))
-    return station_list
+    stations = xml.findall("stations/station")
+    return [{elt.tag: elt.text for elt in station} for station in stations]
 
   def bsa(self, stn="ALL"):
     xml = get_xml(API_ROOT + "stn.aspx?cmd=stninfo&orig=%s&key=%s" % (stn,self.api_key))
