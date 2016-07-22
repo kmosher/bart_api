@@ -131,6 +131,15 @@ class BartApi(object):
         xml = self.call('sched', 'holiday')
         return [etree_to_dict(holiday) for holiday in xml.findall('holidays/holiday')]
 
+    def schedules(self):
+        xml = self.call('sched', 'scheds')
+        return [dict(sched.items()) for sched in xml.findall('schedules/schedule')]
+
+    def special_schedules(self):
+        xml = self.call('sched', 'special')
+        return [etree_to_dict(schedule) for schedule in
+                xml.findall('special_schedules/special_schedule')]
+
     def get_item(self, item_name, xml):
         item_list = xml.findall(".//" + item_name)
         if len(item_list) == 1:
@@ -141,22 +150,6 @@ class BartApi(object):
                     list_of_items.append(entry.text)
             return list_of_items
 
-    def get_schedules(self):
-        xml = get_xml(API_ROOT + "route.aspx?cmd=scheds&key=%s" % (self.api_key))
-        raw_schedules = xml.findall(".//schedule")
-        schedules = []
-        for schedule in raw_schedules:
-                id = schedule.get('id')
-                effective_date = schedule.get('effectivedate')
-                schedules.append({ "id" : id, "effective_date" : effective_date})
-        return schedules
-
-    def get_special_schedules(self, legend="1"):
-        xml = get_xml(API_ROOT + "stn.aspx?cmd=special&key=%s&l=%s" % (self.api_key,legend))
-        schedule_xml = xml.find('.//special_schedule')
-        xml_dict = dict(((elt.tag,elt.text) for elt in schedule_xml))
-        return xml_dict
-    
     def get_station_schedule(self, station):
         xml = get_xml(API_ROOT + "stn.aspx?cmd=stnsched&orig=%s&key=%s" % (station,self.api_key))
         raw_schedules = xml.findall('.//item')
