@@ -101,23 +101,23 @@ class BartApi(object):
                 self._etds_to_dict(station.findall('etd'))
                 for station in xml.findall('station')}
 
-    def routes(self, date="now", schedule=None):
+    def routes(self, date=None, schedule=None):
         xml = self.call('route', 'routes', date=date, sched=schedule)
         return [etree_to_dict(route) for route in xml.findall("routes/route")]
 
-    def route_info(self, route="all", sched=None, date="today"):
-        if sched is None:
-            url = API_ROOT + "route.aspx?cmd=routeinfo&route=%s&date=%s&key=%s" % (route,date,self.api_key)
-        else:
-            xml = get_xml(API_ROOT + "route.aspx?cmd=routeinfo&route=%s&sched=%s&date=%s&key=%s" % (route,sched,date,self.api_key))
-        raw_route = xml.find(".//route")
-        raw_stations = raw_route.findall(".//station")
-        route = dict(((elt.tag,elt.text) for elt in raw_route))
-        station_list = []
-        for station in raw_stations:
-                station_list.append(station.text)
-        route['config'] = station_list
+    def _route_to_dict(self, route_elm):
+        route = etree_to_dict(route_elm)
+        del route['config']
+        route['stations'] = list(route_elm.find("config").itertext())
         return route
+
+    def route_info(self, route, date=None, schedule=None):
+        xml = self.call('route', 'routeinfo', route=route, date=date, sched=schedule)
+        return self._route_to_dict(xml.find('routes/route'))
+
+    def all_route_info(self, date=None, schedule=None):
+        xml = self.call('route', 'routeinfo', route='all', date=date, sched=schedule)
+        return [self._route_to_dict(route) for route in xml.findall('routes/route')]
 
     def get_item(self, item_name, xml):
         item_list = xml.findall(".//" + item_name)
