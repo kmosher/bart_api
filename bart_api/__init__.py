@@ -2,12 +2,14 @@ from urllib2 import urlopen
 from xml.etree import ElementTree
 
 API_ROOT = 'http://api.bart.gov/api/'
+DEBUG = False
 
 class BartApiException(Exception): pass
 
 def get_xml(url):
   raw_response = urlopen(url)
   xml = parse_response(raw_response)
+  if DEBUG: ElementTree.dump(xml)
   errors = xml.find('error')
   if errors:
       raise BartApiException(errors.findtext('text'), errors.findtext('details'))
