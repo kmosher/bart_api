@@ -29,12 +29,12 @@ class BartApi():
         self.api_key = api_key
         self.DEBUG = False
 
-    def call(self, servlet, cmd, **args):
-        args.update({'cmd': cmd, 'key': self.api_key})
+    def call(self, servlet, cmd, **kwargs):
+        kwargs.update({'cmd': cmd, 'key': self.api_key})
         url = '{}/{}.aspx?{}'.format(
             self.api_root,
             servlet,
-            urlencode(args))
+            urlencode(kwargs))
         return get_xml(url, self.DEBUG)
 
     def number_of_trains(self):
