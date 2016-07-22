@@ -23,7 +23,7 @@ def parse_response(raw_xml):
 def etree_to_dict(element_tree):
     return {elt.tag: elt.text for elt in element_tree}
 
-class BartApi():
+class BartApi(object):
     def __init__(self, api_root='http://api.bart.gov/api', api_key='MW9S-E7SL-26DU-VV8V'):
         self.api_root = api_root
         self.api_key = api_key
