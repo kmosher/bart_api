@@ -30,6 +30,7 @@ class BartApi(object):
         self.DEBUG = False
 
     def call(self, servlet, cmd, **kwargs):
+        kwargs = {k: v for k, v in kwargs.iteritems() if v is not None}
         kwargs.update({'cmd': cmd, 'key': self.api_key})
         url = '{}/{}.aspx?{}'.format(
             self.api_root,
@@ -65,18 +66,14 @@ class BartApi(object):
         station_dict['flags'] = dict(station_elm.items())
         return station_dict
 
-    def departure_information(self, station="ALL", platform=None, direction=None):
+    def departure_info(self, station, platform=None, direction=None):
         xml = self.call('etd', 'etd', orig=station, platform=platform, direction=direction)
-        raw_etds = xml.findall(".//etd")
-        etd_list=[]
-        for etd in raw_etds:
-                raw_estimates = etd.findall("estimate")
-                estimates = []
-                for estimate in raw_estimates:
-                    estimates.append(dict(((elt.tag,elt.text) for elt in estimate)))
-                raw_dict = { "destination" : etd.find("destination").text, "abbreviation" : etd.find("abbreviation").text, "estimates" : estimates }
-                etd_list.append(raw_dict)
-        return etd_list
+        departures = {}
+        for etd in xml.findall('station/etd'):
+            departures[etd.findtext('abbreviation')] = {
+                'name': etd.findtext('destination'),
+                'estimates' : [etree_to_dict(elt) for elt in etd.findall('estimate')]}
+        return departures
 
     def routes(self, sched=None, date="today"):
         if sched is None:
