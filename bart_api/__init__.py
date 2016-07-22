@@ -1,3 +1,4 @@
+import re
 from urllib import urlencode
 from urllib2 import urlopen
 from xml.etree import ElementTree
@@ -24,6 +25,14 @@ def etree_to_dict(element_tree):
     if element_tree is None:
         return {}
     return {elt.tag: elt.text for elt in element_tree}
+
+def element_to_dict(element):
+    return {camel_to_snake(k): v for k, v in element.items()}
+
+def camel_to_snake(string):
+    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', string)
+    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+
 
 class Station(object):
 
@@ -83,7 +92,7 @@ class BartApi(object):
         if station_elm is None:
             raise BartApiException('No station access info found for "%s"' % station)
         station_dict = etree_to_dict(station_elm)
-        station_dict['flags'] = dict(station_elm.items())
+        station_dict['flags'] = element_to_dict(station_elm)
         return station_dict
 
     def _etds_to_dict(self, etds):
@@ -133,12 +142,16 @@ class BartApi(object):
 
     def schedules(self):
         xml = self.call('sched', 'scheds')
-        return [dict(sched.items()) for sched in xml.findall('schedules/schedule')]
+        return [element_to_dict(schedule) for schedule in xml.findall('schedules/schedule')]
 
     def special_schedules(self):
         xml = self.call('sched', 'special')
         return [etree_to_dict(schedule) for schedule in
                 xml.findall('special_schedules/special_schedule')]
+
+    def station_schedule(self, station, date=None):
+        xml = self.call('sched', 'stnsched', orig=station, date=date)
+        return [element_to_dict(item) for item in xml.findall('station/item')]
 
     def get_item(self, item_name, xml):
         item_list = xml.findall(".//" + item_name)
@@ -150,14 +163,6 @@ class BartApi(object):
                     list_of_items.append(entry.text)
             return list_of_items
 
-    def get_station_schedule(self, station):
-        xml = get_xml(API_ROOT + "stn.aspx?cmd=stnsched&orig=%s&key=%s" % (station,self.api_key))
-        raw_schedules = xml.findall('.//item')
-        schedule_list = []
-        for item in raw_schedules:
-                schedule_dict = { "line" : item.get('line'), "train_head_station" : item.get('trainHeadStation'), "orig_time" : item.get('origTime'), "dest_time" : item.get('destTime'), "train_idx" : item.get('trainIdx'), "bikeflag" : item.get('bikeflag') }
-                schedule_list.append(schedule_dict)
-        return schedule_list
 
     def get_route_schedule(self, sched='', date='today', legend="1"):
         if not sched=='':
