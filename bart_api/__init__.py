@@ -21,6 +21,8 @@ def parse_response(raw_xml):
     return parsed_xml
 
 def etree_to_dict(element_tree):
+    if element_tree is None:
+        return {}
     return {elt.tag: elt.text for elt in element_tree}
 
 class Station(object):
@@ -45,7 +47,7 @@ class BartApi(object):
     def __init__(self, api_root='http://api.bart.gov/api', api_key='MW9S-E7SL-26DU-VV8V'):
         self.api_root = api_root
         self.api_key = api_key
-        self.DEBUG = False
+        self.debug = False
 
     def call(self, servlet, cmd, **kwargs):
         kwargs = {k: v for k, v in kwargs.iteritems() if v is not None}
@@ -54,7 +56,7 @@ class BartApi(object):
             self.api_root,
             servlet,
             urlencode(kwargs))
-        return get_xml(url, self.DEBUG)
+        return get_xml(url, self.debug)
 
     def number_of_trains(self):
         return int(self.call('bsa', 'count').findtext('traincount'))
@@ -119,6 +121,12 @@ class BartApi(object):
         xml = self.call('route', 'routeinfo', route='all', date=date, sched=schedule)
         return [self._route_to_dict(route) for route in xml.findall('routes/route')]
 
+    def fare(self, origin, dest, date=None, schedule=None):
+        xml = self.call('sched', 'fare', orig=origin, dest=dest, date=date, sched=schedule)
+        trip = etree_to_dict(xml.find('trip'))
+        trip['discount'] = etree_to_dict(xml.find('trip/discount'))
+        return trip
+
     def holidays(self):
         xml = self.call('sched', 'holiday')
         return [etree_to_dict(holiday) for holiday in xml.findall('holidays/holiday')]
@@ -173,9 +181,3 @@ class BartApi(object):
                         stops[stop.get("station")] = raw_dict
                 trains[train.get("index")] = stops
         return trains
-
-    def get_fare(self, orig, dest):
-        xml = get_xml(API_ROOT + "stn.aspx?cmd=fare&orig=%s&dest=%s&key=%s" % (orig,dest,self.api_key))
-        raw_fare = xml.find(".//trip")
-        fare_dict = { "fare" : raw_fare.find("fare").text, "clipper_fare" : raw_fare.find(".//clipper").text }
-        return fare_dict
