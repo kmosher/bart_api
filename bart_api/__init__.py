@@ -57,19 +57,16 @@ class BartApi():
             raise BartApiException('No station info found for "%s"' % station)
         return etree_to_dict(station_elm)
 
-    def station_access(self, station, legend="1"):
-        xml = get_xml(API_ROOT + "stn.aspx?cmd=stnaccess&orig=%s&key=%s&l=%s" % (station,self.api_key,legend))
-        return dict(((elt.tag,elt.text) for elt in xml))
+    def station_access(self, station, legend="0"):
+        station_elm = self.call('stn', 'stnaccess', orig=station, l=legend).find('stations/station')
+        if station_elm is None:
+            raise BartApiException('No station access info found for "%s"' % station)
+        station_dict = etree_to_dict(station_elm)
+        station_dict['flags'] = dict(station_elm.items())
+        return station_dict
 
-    def etd(self, station="ALL", platform=None, direction=None):
-        if station == "ALL":
-            xml = get_xml(API_ROOT + "etd.aspx?cmd=etd&orig=ALL&key=%s" % (self.api_key))
-        elif platform is None:
-            xml = get_xml(API_ROOT + "etd.aspx?cmd=etd&orig=%s&direction=%s&key=%s" % (station,direction,self.api_key))
-        elif direction is None:
-            url = API_ROOT + "etd.aspx?cmd=etd&orig=%s&platform=%s&key=%s" % (station,platform,self.api_key)
-        else:
-            xml = get_xml(API_ROOT + "etd.aspx?cmd=etd&orig=%s&platform=%s&direction=%s&key=%s" % (station,platform,direction,self.api_key))
+    def departure_information(self, station="ALL", platform=None, direction=None):
+        xml = self.call('etd', 'etd', orig=station, platform=platform, direction=direction)
         raw_etds = xml.findall(".//etd")
         etd_list=[]
         for etd in raw_etds:
