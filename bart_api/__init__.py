@@ -40,15 +40,16 @@ class BartApi():
     return int(self.call('bsa', 'count').findtext('traincount'))
 
   def elevator_status(self):
-    return self.call("bsa", "elev").findtext('bsa/description')
+    return self.call('bsa', 'elev').findtext('bsa/description')
+
+  def get_advisories(self, station='ALL'):
+    bsas = self.call('bsa', 'bsa', orig=station).findall('bsa')
+    return [{elm.findtext('station'): elm.findtext('description')} for elm in bsas]
 
   def get_stations(self):
     stations = self.call('stn', 'stns').findall('stations/station')
     return [{elt.tag: elt.text for elt in station} for station in stations]
 
-  def bsa(self, stn="ALL"):
-    xml = get_xml(API_ROOT + "stn.aspx?cmd=stninfo&orig=%s&key=%s" % (stn, self.api_key))
-    return xml.find(".//description").text
 
   def station_info(self, station):
     xml = get_xml(API_ROOT + "stn.aspx?cmd=stninfo&orig=%s&key=%s" % (station,self.api_key))
