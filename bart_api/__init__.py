@@ -52,9 +52,10 @@ class BartApi():
         return [etree_to_dict(station) for station in stations]
 
     def station_info(self, station):
-        xml = get_xml(API_ROOT + "stn.aspx?cmd=stninfo&orig=%s&key=%s" % (station,self.api_key))
-        raw_station = xml.find(".//station")
-        return dict(((elt.tag,elt.text) for elt in raw_station))
+        station_elm = self.call('stn', 'stninfo', orig=station).find('stations/station')
+        if not station_elm:
+            raise BartApiException('No station info found for "%s"' % station)
+        return etree_to_dict(station_elm)
 
     def station_access(self, station, legend="1"):
         xml = get_xml(API_ROOT + "stn.aspx?cmd=stnaccess&orig=%s&key=%s&l=%s" % (station,self.api_key,legend))
