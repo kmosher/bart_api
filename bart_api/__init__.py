@@ -66,14 +66,23 @@ class BartApi(object):
         station_dict['flags'] = dict(station_elm.items())
         return station_dict
 
-    def departure_info(self, station, platform=None, direction=None):
-        xml = self.call('etd', 'etd', orig=station, platform=platform, direction=direction)
+    def _etds_to_dict(self, etds):
         departures = {}
-        for etd in xml.findall('station/etd'):
+        for etd in etds:
             departures[etd.findtext('abbreviation')] = {
                 'name': etd.findtext('destination'),
                 'estimates' : [etree_to_dict(elt) for elt in etd.findall('estimate')]}
         return departures
+
+    def departure_info(self, station, platform=None, direction=None):
+        xml = self.call('etd', 'etd', orig=station, platform=platform, direction=direction)
+        return self._etds_to_dict(xml.findall('station/etd'))
+
+    def all_departure_info(self):
+        xml = self.call('etd', 'etd', orig='ALL')
+        return {station.findtext('abbr'):
+                self._etds_to_dict(station.findall('etd'))
+                for station in xml.findall('station')}
 
     def routes(self, sched=None, date="today"):
         if sched is None:
