@@ -137,6 +137,11 @@ class BartApi(object):
         trip['discount'] = etree_to_dict(xml.find('trip/discount'))
         return trip
 
+    # TODO: Make this API way more pythonic
+    def load(self, first_leg, second_leg=None, third_leg=None, schedule_type='W'):
+        xml = self.call('sched', 'load', ld1=first_leg, ld2=second_leg, ld3=third_leg, st=schedule_type)
+        return [element_to_dict(leg) for leg in xml.findall('load/request/leg')]
+
     def holidays(self):
         xml = self.call('sched', 'holiday')
         return [etree_to_dict(holiday) for holiday in xml.findall('holidays/holiday')]
@@ -158,15 +163,3 @@ class BartApi(object):
     def station_schedule(self, station, date=None):
         xml = self.call('sched', 'stnsched', orig=station, date=date)
         return [element_to_dict(item) for item in xml.findall('station/item')]
-
-    def get_item(self, item_name, xml):
-        item_list = xml.findall(".//" + item_name)
-        if len(item_list) == 1:
-            return [item_list[0].text]
-        else:
-            list_of_items = []
-            for entry in item_list:
-                    list_of_items.append(entry.text)
-            return list_of_items
-
-
