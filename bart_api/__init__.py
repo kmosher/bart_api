@@ -29,6 +29,7 @@ def etree_to_dict(element_tree):
 def element_to_dict(element):
     return {camel_to_snake(k): v for k, v in element.items()}
 
+# From http://stackoverflow.com/a/1176023
 def camel_to_snake(string):
     s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', string)
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
