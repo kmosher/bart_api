@@ -53,7 +53,7 @@ class BartApi():
 
     def station_info(self, station):
         station_elm = self.call('stn', 'stninfo', orig=station).find('stations/station')
-        if not station_elm:
+        if station_elm is None:
             raise BartApiException('No station info found for "%s"' % station)
         return etree_to_dict(station_elm)
 
